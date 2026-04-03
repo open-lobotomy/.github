@@ -1,0 +1,71 @@
+name: .NET CI (Windows)
+
+on:
+  workflow_call:
+    inputs:
+      solution-file:
+        description: 'Solution file name (e.g., MyProject.slnx)'
+        required: true
+        type: string
+      dotnet-version:
+        description: '.NET SDK version'
+        required: false
+        type: string
+        default: '10.x'
+      private-references-repo:
+        description: 'Repository containing private references (owner/repo). If empty, skips checkout.'
+        required: false
+        type: string
+        default: ''
+      local-pack-projects:
+        description: 'Newline-separated .csproj paths to pack into ./nupkg before restore'
+        required: false
+        type: string
+        default: ''
+    secrets:
+      PRIVATE_REFERENCES_TOKEN:
+        required: false
+
+jobs:
+  ci-windows:
+    name: CI (Windows)
+    runs-on: windows-latest
+    steps:
+
+      - name: Checkout main repository
+        uses: actions/checkout@v4
+
+      # Consumer repos pass this via: private-references-repo: ${{ vars.PRIVATE_REFERENCES_REPO }}
+      - name: Checkout private references
+        if: ${{ inputs.private-references-repo != '' }}
+        uses: actions/checkout@v4
+        with:
+          path: external/LobotomyCorp_Data
+          persist-credentials: false
+          repository: ${{ inputs.private-references-repo }}
+          token: ${{ secrets.PRIVATE_REFERENCES_TOKEN }}
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ inputs.dotnet-version }}
+
+      - name: Pack local projects
+        if: ${{ inputs.local-pack-projects != '' }}
+        shell: bash
+        run: |
+          mkdir -p ./nupkg
+          echo "${{ inputs.local-pack-projects }}" | while IFS= read -r project; do
+            if [ -n "$project" ]; then
+              dotnet pack "$project" -c Release -o ./nupkg
+            fi
+          done
+
+      - name: Restore dependencies
+        run: dotnet restore ${{ inputs.solution-file }}
+
+      - name: Build
+        run: dotnet build --no-restore ${{ inputs.solution-file }}
+
+      - name: Test
+        run: dotnet test --no-build --verbosity normal --blame-hang-timeout 10s ${{ inputs.solution-file }}
