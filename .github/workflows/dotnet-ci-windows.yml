@@ -68,4 +68,5 @@ jobs:
         run: dotnet build --no-restore ${{ inputs.solution-file }}
 
       - name: Test
+        timeout-minutes: 30
         run: dotnet test --no-build --verbosity normal ${{ inputs.solution-file }}
