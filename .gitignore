@@ -1,0 +1,11 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# Editors / IDEs
+.claude/
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
