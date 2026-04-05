@@ -68,4 +68,4 @@ jobs:
         run: dotnet build --no-restore ${{ inputs.solution-file }}
 
       - name: Test
-        run: dotnet test --no-build --verbosity normal --blame-hang-timeout 10s ${{ inputs.solution-file }}
+        run: dotnet test --no-build --verbosity normal --blame-hang-timeout 10s --blame-crash ${{ inputs.solution-file }}
