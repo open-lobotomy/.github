@@ -62,7 +62,13 @@ jobs:
         run: dotnet nuget update source github --username open-lobotomy --password ${{ secrets.PACKAGES_TOKEN || github.token }} --store-password-in-clear-text || true
 
       - name: Restore tools
-        run: dotnet tool restore
+        run: |
+          if [ ! -f .config/dotnet-tools.json ]; then
+            echo "::error file=.config/dotnet-tools.json::This reusable workflow requires a local .NET tool manifest in the consuming repository. Add .config/dotnet-tools.json with the dotnet-ci tool (for example: 'dotnet new tool-manifest' then 'dotnet tool install dotnet-ci') or update the repository to the current org CI bootstrap."
+            exit 1
+          fi
+
+          dotnet tool restore
 
       - name: Run CI
         run: dotnet ci --check
