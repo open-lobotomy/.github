@@ -70,5 +70,10 @@ jobs:
 
           dotnet tool restore
 
+          if ! dotnet tool list --local | awk 'NR > 2 { print $1 }' | grep -Fxq 'dotnet-ci'; then
+            echo "::error file=.config/dotnet-tools.json::The local .NET tool manifest does not include the required 'dotnet-ci' tool. Install it with 'dotnet tool install dotnet-ci' and commit the updated .config/dotnet-tools.json."
+            exit 1
+          fi
+
       - name: Run CI
         run: dotnet ci --check
