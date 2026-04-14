@@ -3,10 +3,6 @@ name: .NET CI
 on:
   workflow_call:
     inputs:
-      solution-file:
-        description: 'Solution file name (e.g., MyProject.slnx)'
-        required: true
-        type: string
       dotnet-version:
         description: '.NET SDK version'
         required: false
@@ -17,26 +13,6 @@ on:
         required: false
         type: string
         default: ''
-      collect-coverage:
-        description: 'Run tests with coverlet coverage collection'
-        required: false
-        type: boolean
-        default: false
-      coverage-files:
-        description: 'Newline-separated list of coverage XML paths to upload'
-        required: false
-        type: string
-        default: ''
-      upload-codecov:
-        description: 'Upload coverage to Codecov'
-        required: false
-        type: boolean
-        default: false
-      upload-codacy:
-        description: 'Upload coverage to Codacy'
-        required: false
-        type: boolean
-        default: false
       local-pack-projects:
         description: 'Newline-separated .csproj paths to pack into ./nupkg before restore'
         required: false
@@ -45,9 +21,7 @@ on:
     secrets:
       PRIVATE_REFERENCES_TOKEN:
         required: false
-      CODECOV_TOKEN:
-        required: false
-      CODACY_PROJECT_TOKEN:
+      PACKAGES_TOKEN:
         required: false
 
 jobs:
@@ -85,43 +59,21 @@ jobs:
           done
 
       - name: Authenticate GitHub Packages
-        run: dotnet nuget update source github --username open-lobotomy --password ${{ github.token }} --store-password-in-clear-text || true
+        run: dotnet nuget update source github --username open-lobotomy --password ${{ secrets.PACKAGES_TOKEN || github.token }} --store-password-in-clear-text || true
 
-      - name: Restore dependencies
-        run: dotnet restore --ignore-failed-sources ${{ inputs.solution-file }}
+      - name: Restore tools
+        run: |
+          if [ ! -f .config/dotnet-tools.json ]; then
+            echo "::error file=.config/dotnet-tools.json::This reusable workflow requires a local .NET tool manifest in the consuming repository. Add .config/dotnet-tools.json with the dotnet-ci tool (for example: 'dotnet new tool-manifest' then 'dotnet tool install dotnet-ci') or update the repository to the current org CI bootstrap."
+            exit 1
+          fi
 
-      - name: Build
-        run: dotnet build --no-restore ${{ inputs.solution-file }}
+          dotnet tool restore
 
-      - name: Test
-        run: >-
-          dotnet test
-          ${{ inputs.collect-coverage && '/p:CollectCoverage=true /p:CoverletOutput="./coverage.opencover.xml" /p:CoverletOutputFormat=opencover' || '' }}
-          --no-build --verbosity normal --blame-hang-timeout 10s
-          ${{ inputs.solution-file }}
+          if ! dotnet tool list --local | awk 'NR > 2 { print $1 }' | grep -Fxq 'dotnet-ci'; then
+            echo "::error file=.config/dotnet-tools.json::The local .NET tool manifest does not include the required 'dotnet-ci' tool. Install it with 'dotnet tool install dotnet-ci' and commit the updated .config/dotnet-tools.json."
+            exit 1
+          fi
 
-      - name: Upload coverage reports to Codecov
-        if: ${{ inputs.upload-codecov && inputs.coverage-files != '' }}
-        uses: codecov/codecov-action@v5
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          files: ${{ inputs.coverage-files }}
-
-      - name: Upload coverage reports to Codacy
-        if: ${{ inputs.upload-codacy && inputs.coverage-files != '' }}
-        uses: codacy/codacy-coverage-reporter-action@v1
-        with:
-          project-token: ${{ secrets.CODACY_PROJECT_TOKEN }}
-          coverage-reports: ${{ inputs.coverage-files }}
-
-  ci-windows:
-    name: CI (Windows)
-    needs: [ci]
-    uses: open-lobotomy/.github/.github/workflows/dotnet-ci-windows.yml@main
-    with:
-      solution-file: ${{ inputs.solution-file }}
-      dotnet-version: ${{ inputs.dotnet-version }}
-      private-references-repo: ${{ inputs.private-references-repo }}
-      local-pack-projects: ${{ inputs.local-pack-projects }}
-    secrets:
-      PRIVATE_REFERENCES_TOKEN: ${{ secrets.PRIVATE_REFERENCES_TOKEN }}
+      - name: Run CI
+        run: dotnet ci --check
