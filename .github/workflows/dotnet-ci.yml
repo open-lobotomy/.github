@@ -64,14 +64,14 @@ jobs:
       - name: Restore tools
         run: |
           if [ ! -f .config/dotnet-tools.json ]; then
-            echo "::error file=.config/dotnet-tools.json::This reusable workflow requires a local .NET tool manifest in the consuming repository. Add .config/dotnet-tools.json with the OpenLobotomy.Tooling tool (for example: 'dotnet new tool-manifest' then 'dotnet tool install OpenLobotomy.Tooling') or update the repository to the current org CI bootstrap."
+            echo "::error file=.config/dotnet-tools.json::This reusable workflow requires a local .NET tool manifest in the consuming repository. Add .config/dotnet-tools.json with the OpenLobotomy.Tooling tool (for example: 'dotnet new tool-manifest' then 'dotnet tool install --local OpenLobotomy.Tooling') or update the repository to the current org CI bootstrap."
             exit 1
           fi
 
           dotnet tool restore
 
           if ! dotnet tool list --local | awk 'NR > 2 { print $1 }' | grep -Fxq 'openlobotomy.tooling'; then
-            echo "::error file=.config/dotnet-tools.json::The local .NET tool manifest does not include the required 'OpenLobotomy.Tooling' tool. Install it with 'dotnet tool install OpenLobotomy.Tooling' and commit the updated .config/dotnet-tools.json."
+            echo "::error file=.config/dotnet-tools.json::The local .NET tool manifest does not include the required 'OpenLobotomy.Tooling' tool. Install it with 'dotnet tool install --local OpenLobotomy.Tooling' and commit the updated .config/dotnet-tools.json."
             exit 1
           fi
 
