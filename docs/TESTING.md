@@ -1,14 +1,14 @@
 <!--
-Canonical: https://github.com/open-lobotomy/.github/blob/main/TESTING.md
-Version: 1.0.0
-Last updated: 2026-04-17
+Canonical: https://github.com/open-lobotomy/.github/blob/main/docs/TESTING.md
+Version: 1.2.0
+Last updated: 2026-05-07
 -->
 
 # Testing Standards
 
-This document defines testing conventions for all Open Lobotomy repositories. It is the canonical source — each consumer repo keeps an identical copy at its root. Drift between a consumer copy and this file is a CI failure (enforced by `dotnet ci check-testing-doc`).
+This document defines testing conventions for all Open Lobotomy repositories. It is the canonical source — consumer repos receive a synced copy at `docs/org/TESTING.md` via the `sync-org-docs` workflow in `open-lobotomy/.github`. Do not edit the synced copy directly; changes made here flow out to every repo tagged with the `dotnet-standards` topic.
 
-When updating this file: bump `Version` in the header, update `Last updated`, and notify downstream repos to run `dotnet ci sync-testing-doc` on their next change.
+When updating this file: bump `Version` in the header, update `Last updated`, and merge to `main`. The sync workflow will open a PR in every tagged consumer repo automatically.
 
 ## Framework stack
 
@@ -26,7 +26,6 @@ All Open Lobotomy test projects use the same stack. Pin these versions in each r
 | AutoFixture.AutoMoq | 4.18.1 |
 | AutoFixture.Xunit3 | 4.19.0 |
 | coverlet.collector | 8.0.0 |
-| coverlet.msbuild | 8.0.0 |
 
 When a version bump is needed, update `open-lobotomy-tooling`'s `Directory.Packages.props` first, verify its tests pass, then bump this table (minor version) and propagate.
 
@@ -64,6 +63,25 @@ The three parts answer three questions: *what is being tested, under what condit
 ```
 
 Enforced by `dotnet ci --check` on every push and PR. Locally, `dotnet ci` runs the full check (format + test + coverage).
+
+Coverage is collected via VSTest's XPlat Code Coverage data collector (`coverlet.collector`) at run time, not via msbuild build-time instrumentation. Each repo ships a `coverlet.runsettings` at its root selecting the OpenCover output format that the threshold checker parses:
+
+```xml
+<?xml version="1.0" encoding="utf-8"?>
+<RunSettings>
+  <DataCollectionRunSettings>
+    <DataCollectors>
+      <DataCollector friendlyName="XPlat code coverage">
+        <Configuration>
+          <Format>opencover</Format>
+        </Configuration>
+      </DataCollector>
+    </DataCollectors>
+  </DataCollectionRunSettings>
+</RunSettings>
+```
+
+This pattern works with `dotnet test --no-build` and any other build-step variation, because instrumentation happens at test-host time rather than at compile time.
 
 New modules that cannot yet meet 80% should be added to `ci.json`'s `skipModules` list with a comment explaining why, and removed from the list once coverage catches up. `skipModules` is not a permanent exemption — treat entries as debt.
 
