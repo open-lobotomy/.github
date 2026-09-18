@@ -33,12 +33,12 @@ jobs:
     steps:
 
       - name: Checkout main repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
       # Consumer repos pass this via: private-references-repo: ${{ vars.PRIVATE_REFERENCES_REPO }}
       - name: Checkout private references
         if: ${{ inputs.private-references-repo != '' }}
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           path: external/LobotomyCorp_Data
           persist-credentials: false
@@ -46,7 +46,7 @@ jobs:
           token: ${{ secrets.PRIVATE_REFERENCES_TOKEN }}
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
         with:
           dotnet-version: ${{ inputs.dotnet-version }}
 

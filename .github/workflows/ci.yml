@@ -10,10 +10,36 @@ jobs:
   ci:
     name: CI
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
       - name: Install and run actionlint
         run: |
-          bash <(curl -s https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash)
-          ./actionlint
+          docker run --rm --mount type=bind,source="$GITHUB_WORKSPACE",target=/repo,readonly rhysd/actionlint@sha256:9d36088643581e728c969f35141f88139fec77280b2be23c1f66f8e40e1025e7 /repo/.github/workflows/ci.yml /repo/.github/workflows/dotnet-ci.yml /repo/.github/workflows/dotnet-ci-windows.yml
+
+  consumer-canary:
+    name: Consumer canary (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
+    steps:
+      - name: Check out workflow repository
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
+      - name: Set up .NET
+        uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
+        with:
+          dotnet-version: 10.x
+      - name: Build consumer fixture
+        shell: bash
+        run: |
+          canary_dir="$RUNNER_TEMP/open-lobotomy-consumer-canary"
+          dotnet new classlib --name OpenLobotomyConsumerCanary --output "$canary_dir" --framework net10.0
+          dotnet build "$canary_dir/OpenLobotomyConsumerCanary.csproj" --configuration Release
