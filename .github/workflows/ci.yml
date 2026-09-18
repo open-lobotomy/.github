@@ -57,4 +57,4 @@ jobs:
               public static string ContractVersion => Contract.ContractVersion;
           }
           EOF
-          dotnet build "$canary_dir/project/OpenLobotomyConsumerCanary.csproj" --configuration Release
+          dotnet build "$canary_dir/project/OpenLobotomyConsumerCanary.csproj" --configuration Release --warnaserror
