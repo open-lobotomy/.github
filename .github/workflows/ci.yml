@@ -42,11 +42,19 @@ jobs:
       - name: Build consumer fixture
         shell: bash
         run: |
-          producer_dir="$GITHUB_WORKSPACE/.canary-consumer-contract"
           canary_dir="$RUNNER_TEMP/open-lobotomy-consumer-canary"
-          mkdir -p "$producer_dir" "$canary_dir/nupkg" "$canary_dir/project"
-          dotnet new classlib --name OpenLobotomy.ConsumerContract --output "$producer_dir" --framework net10.0
-          dotnet pack "$producer_dir/OpenLobotomy.ConsumerContract.csproj" --configuration Release --output "$canary_dir/nupkg"
+          mkdir -p "$canary_dir/nupkg" "$canary_dir/project"
+          dotnet pack "$GITHUB_WORKSPACE/test/ConsumerCanary/ConsumerCanary.csproj" --configuration Release --output "$canary_dir/nupkg"
           dotnet new classlib --name OpenLobotomyConsumerCanary --output "$canary_dir/project" --framework net10.0
-          dotnet add "$canary_dir/project/OpenLobotomyConsumerCanary.csproj" package OpenLobotomy.ConsumerContract --version 1.0.0 --source "$canary_dir/nupkg"
+          dotnet add "$canary_dir/project/OpenLobotomyConsumerCanary.csproj" package OpenLobotomy.ConsumerContract --version 1.0.1 --source "$canary_dir/nupkg"
+          cat > "$canary_dir/project/ConsumerContractProbe.cs" <<'EOF'
+          using Contract = OpenLobotomy.ConsumerContract.ConsumerContract;
+
+          namespace OpenLobotomyConsumerCanary;
+
+          public static class ConsumerContractProbe
+          {
+              public static string ContractVersion => Contract.ContractVersion;
+          }
+          EOF
           dotnet build "$canary_dir/project/OpenLobotomyConsumerCanary.csproj" --configuration Release
